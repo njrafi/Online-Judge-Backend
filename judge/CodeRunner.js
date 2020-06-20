@@ -60,32 +60,39 @@ exports.runCode = async (filePath, language, input, timeLimit) => {
 
 	const codeExecuterProcess = getExecuter(compiledFile, language);
 
-	const timeout = setTimeout(() => {
-		console.log("Timeout", codeExecuterProcess.pid);
-		try {
-			codeExecuterProcess.stdin.pause();
-			codeExecuterProcess.kill();
-		} catch (e) {
-			console.error("Cannot kill process");
-		}
-	}, timeLimit * 1000);
+	return new Promise((resolve, reject) => {
+		let output = "";
+		const timeout = setTimeout(() => {
+			console.log("Timeout", codeExecuterProcess.pid);
+			try {
+				codeExecuterProcess.stdin.pause();
+				codeExecuterProcess.kill();
+			} catch (e) {
+				console.error("Cannot kill process");
+				reject("Cannot kill process");
+			}
+		}, timeLimit * 1000);
 
-	codeExecuterProcess.stdout.on("data", (data) => {
-		console.log(`stdout: ${data}`);
+		codeExecuterProcess.stdout.on("data", (data) => {
+			console.log(`stdout: ${data}`);
+			output += data;
+		});
+
+		codeExecuterProcess.stderr.on("data", (data) => {
+			clearTimeout(timeout);
+			console.error(`stderr: ${data}`);
+			reject(data);
+		});
+
+		codeExecuterProcess.on("close", (code) => {
+			clearTimeout(timeout);
+			console.log(`child process exited with code ${code}`);
+			resolve(output);
+		});
+
+		const stdinStream = new stream.Readable();
+		stdinStream.push(input); // Add data to the internal queue for users of the stream to consume
+		stdinStream.push(null); // Signals the end of the stream (EOF)
+		stdinStream.pipe(codeExecuterProcess.stdin);
 	});
-
-	codeExecuterProcess.stderr.on("data", (data) => {
-		clearTimeout(timeout);
-		console.error(`stderr: ${data}`);
-	});
-
-	codeExecuterProcess.on("close", (code) => {
-		clearTimeout(timeout);
-		console.log(`child process exited with code ${code}`);
-	});
-
-	const stdinStream = new stream.Readable();
-	stdinStream.push(input); // Add data to the internal queue for users of the stream to consume
-	stdinStream.push(null); // Signals the end of the stream (EOF)
-	stdinStream.pipe(codeExecuterProcess.stdin);
 };

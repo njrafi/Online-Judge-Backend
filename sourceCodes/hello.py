@@ -1,3 +1,3 @@
 name = input()
-print("Hello world")
+print("Hello world in python")
 print("Hello " + name)

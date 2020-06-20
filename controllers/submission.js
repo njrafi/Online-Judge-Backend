@@ -1,4 +1,5 @@
 const fileOperation = require("../utils/fileOperation");
+const codeRunner = require("../judge/CodeRunner");
 
 exports.postSubmitCode = async (req, res, next) => {
 	console.log("In Submit Code");
@@ -10,13 +11,30 @@ exports.postSubmitCode = async (req, res, next) => {
 	console.log(language);
 	console.log(input);
 
+	let codeFilePath = null;
 	try {
-		let codeFilePath = await fileOperation.writeCodeToFile(code, language);
+		codeFilePath = await fileOperation.writeCodeToFile(code, language);
 		console.log(codeFilePath);
 	} catch (err) {
-		console.log(err);
+		next(err);
+		return err;
 	}
 
+	try {
+		const output = await codeRunner.runCode(
+			codeFilePath,
+			language,
+			input,
+			timeLimit
+		);
+		res.status(200).json({
+			output: output,
+        });
+        return
+	} catch (err) {
+		next(err);
+		return err;
+	}
 	res.status(200).json({
 		status: "Submitted",
 	});
