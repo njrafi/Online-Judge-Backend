@@ -111,7 +111,6 @@ exports.runCode = async (filePath, language, input, timeLimit = 2) => {
 		// Getting output
 		let output = "";
 		codeExecuterProcess.stdout.on("data", (data) => {
-			//console.log(`stdout: ${data}`);
 			output += data;
 		});
 
@@ -131,10 +130,24 @@ exports.runCode = async (filePath, language, input, timeLimit = 2) => {
 			clearTimeout(timeout);
 			console.log(`child process exited with code ${code}`);
 			fileOperation.deleteFile(compiledFile);
-			resolve({
-				verdict: constants.verdict.ac,
-				output: output,
-			});
+			if (code == null) {
+				resolve({
+					verdict: constants.verdict.mle,
+					output: constants.verdict.mle,
+				});
+				return;
+			}
+			if (code === 0) {
+				resolve({
+					verdict: constants.verdict.ac,
+					output: output,
+				});
+			} else {
+				resolve({
+					verdict: constants.verdict.ce,
+					output: output,
+				});
+			}
 		});
 
 		// Setting the stdin

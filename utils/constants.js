@@ -11,4 +11,5 @@ exports.verdict = Object.freeze({
 	ce: "Compilation Error",
 	ac: "Accepted",
 	re: "Run Time Error",
+	mle: "Memory Limit Exceeded",
 });
