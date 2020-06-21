@@ -20,22 +20,17 @@ exports.postSubmitCode = async (req, res, next) => {
 		return err;
 	}
 
+	let codeExecutionData;
 	try {
-		const output = await codeRunner.runCode(
+		codeExecutionData = await codeRunner.runCode(
 			codeFilePath,
 			language,
 			input,
 			timeLimit
 		);
-		res.status(200).json({
-			output: output,
-        });
-        return
 	} catch (err) {
-		next(err);
-		return err;
+		codeExecutionData = err;
 	}
-	res.status(200).json({
-		status: "Submitted",
-	});
+
+	res.status(200).json(codeExecutionData);
 };

@@ -1,14 +1,18 @@
 const { spawn, execFile } = require("child_process");
 const stream = require("stream");
+const constants = require("../utils/constants");
 
 const compileFile = (filePath, language) => {
-	console.log("Compiling ", language);
 	return new Promise((resolve, reject) => {
+		if (!language) reject("No language Defined");
+		if (!filePath) reject("No Filepath defined");
+		console.log("Compiling ", language);
 		switch (language) {
-			case "python":
+			case constants.languages.python:
 				resolve(filePath);
 				break;
-			case "cpp":
+			case constants.languages.cpp:
+				// Command copied from toph
 				const cppCompiler = spawn("g++", [
 					"-static",
 					"-s",
@@ -37,6 +41,7 @@ const compileFile = (filePath, language) => {
 		}
 	});
 };
+
 const getExecuter = (filePath, language) => {
 	console.log("Executing " + language);
 	switch (language) {
@@ -49,19 +54,24 @@ const getExecuter = (filePath, language) => {
 	}
 };
 
-exports.runCode = async (filePath, language, input, timeLimit) => {
-	let compiledFile;
-	try {
-		compiledFile = await compileFile(filePath, language);
-	} catch (err) {
-		console.error(err);
-		return;
-	}
+exports.runCode = async (filePath, language, input, timeLimit = 2) => {
+	return new Promise(async (resolve, reject) => {
+		// Compiling the file
+		let compiledFile;
+		try {
+			compiledFile = await compileFile(filePath, language);
+		} catch (err) {
+			reject({
+				verdict: constants.verdict.ce,
+				output: String(err),
+			});
+			return;
+		}
 
-	const codeExecuterProcess = getExecuter(compiledFile, language);
+		// Executing the compiled file
+		const codeExecuterProcess = getExecuter(compiledFile, language);
 
-	return new Promise((resolve, reject) => {
-		let output = "";
+		// Setting time out
 		const timeout = setTimeout(() => {
 			console.log("Timeout", codeExecuterProcess.pid);
 			try {
@@ -69,27 +79,43 @@ exports.runCode = async (filePath, language, input, timeLimit) => {
 				codeExecuterProcess.kill();
 			} catch (e) {
 				console.error("Cannot kill process");
-				reject("Cannot kill process");
 			}
+			reject({
+				verdict: constants.verdict.tle,
+				output: constants.verdict.tle,
+			});
+			return;
 		}, timeLimit * 1000);
 
+		// Getting output
+		let output = "";
 		codeExecuterProcess.stdout.on("data", (data) => {
-			console.log(`stdout: ${data}`);
+			//console.log(`stdout: ${data}`);
 			output += data;
 		});
 
+		// Any Other error
 		codeExecuterProcess.stderr.on("data", (data) => {
 			clearTimeout(timeout);
 			console.error(`stderr: ${data}`);
-			reject(data);
+			reject({
+				verdict: constants.verdict.re,
+				output: String(data),
+			});
+			return;
 		});
 
+		// Code run finished
 		codeExecuterProcess.on("close", (code) => {
 			clearTimeout(timeout);
 			console.log(`child process exited with code ${code}`);
-			resolve(output);
+			resolve({
+				verdict: constants.verdict.ac,
+				output: output,
+			});
 		});
 
+		// Setting the stdin
 		const stdinStream = new stream.Readable();
 		stdinStream.push(input); // Add data to the internal queue for users of the stream to consume
 		stdinStream.push(null); // Signals the end of the stream (EOF)
