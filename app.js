@@ -42,8 +42,9 @@ mongoose
 		useUnifiedTopology: true,
 	})
 	.then((result) => {
+		const port = process.env.PORT || 4000
 		console.log("connected to mongoDb Database");
-		console.log("server started at port " + process.env.PORT || 4000);
+		console.log("server started at port " + port);
 		app.listen(process.env.PORT || 4000);
 	})
 	.catch((err) => console.log(err));
