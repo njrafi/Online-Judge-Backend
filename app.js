@@ -21,8 +21,10 @@ app.use((req, res, next) => {
 app.use("/submit", submissionRoutes);
 
 app.use("/", (req, res, next) => {
-	console.log("in error");
-	throw new Error("Endpoint not found. Please Check documentation");
+	const message = "Endpoint not found. Please Check documentation";
+	res.status(200).json({
+		message: message
+	})
 });
 
 app.use((error, req, res, next) => {
@@ -42,9 +44,9 @@ mongoose
 		useUnifiedTopology: true,
 	})
 	.then((result) => {
-		const port = process.env.PORT || 4000
+		const port = parseInt(process.env.PORT) || 8080
 		console.log("connected to mongoDb Database");
 		console.log("server started at port " + port);
-		app.listen(process.env.PORT || 4000);
+		app.listen(port);
 	})
 	.catch((err) => console.log(err));
